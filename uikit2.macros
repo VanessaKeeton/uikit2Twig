@@ -1,0 +1,208 @@
+{% macro alert(content, options) %}
+    {% set attributes = options.attributes|default({}) %}
+    {% set ukClass = 'uk-alert' %}
+    {% if options.color %}
+       {% set ukColor = 'uk-alert-' ~ options.color %}
+    {% endif %}
+    {% if options.size %}
+       {% set ukSize = 'uk-alert-' ~ options.size %}
+    {% endif %}
+    {% set classes -%}
+        {{ [ukClass,ukColor,ukSize,attributes.class]|join(' ') -}}
+    {% endset %}
+        <div {% for key, value in attributes|merge({ 'class': classes }) %} {{ key }}="{{ value }}" {% endfor %}{{ options.close ? "data-uk-alert" }}>
+        {% if options.close == 'button' %}
+            <button type="button" class="uk-alert-close uk-close"></button>
+        {% elseif options.close == 'a'%}
+            <a href="#" class="uk-alert-close uk-close"></a>
+        {% else %}
+        {% endif %}
+            {{ content|raw }}
+    </div>
+{% endmacro %}
+
+{% macro badge(content, options) %}
+    {% set attributes = options.attributes|default({}) %}
+    {% set ukClass = 'uk-badge' %}
+    {% if options.color %}
+       {% set ukColor = 'uk-badge-' ~ options.color %}
+    {% endif %}
+    {% if options.notification %}
+       {% set ukNotification = 'uk-badge-notification' %}
+    {% endif %}
+    {% set classes -%}
+        {{ [ukClass,ukColor,ukNotification,attributes.class]|join(' ') -}}
+    {% endset %}
+        <span {% for key, value in attributes|merge({ 'class': classes }) %} {{ key }}="{{ value }}" {% endfor %}>{{ content|raw }}</span>
+{% endmacro %}
+
+{%- macro button(action, options) -%}
+    {% set attributes = options.attributes|default({}) %}
+    {% set ukClass = 'uk-button' %}
+    {% if options.color %}
+       {% set ukColor = 'uk-button-' ~ options.color %}
+    {% endif %}
+    {% if options.size %}
+       {% set ukSize = 'uk-button-' ~ options.size %}
+    {% endif %}
+    {% if options.fullwidth %}
+       {% set ukWidth = 'uk-width-1-1' %}
+    {% endif %}
+    {% if options.styleaslink %}
+       {% set styleaslink = 'uk-button-link' %}
+    {% endif %}
+    {% set classes -%}
+        {{ ukClass }} {{ ukColor }} {{ ukSize }} {{ ukWidth }} {{ styleaslink }} {{ attributes.class -}}
+    {% endset %}
+        <{{ options.link ? "a" : "button"}} {% for key, value in attributes|merge({ 'class': classes }) %} {{ key }}="{{ value }}" {% endfor %} {% if options.disabled %}disabled{% endif %}>
+            {% if options.icon %}
+                {{ _self.icon(options.icon) }}
+            {% endif %}
+                {{ action|raw }} {{ options.subject|raw }}
+        </{{ options.link ? "a" : "button"}}>
+{%- endmacro -%}
+
+{% macro descriptionList(data, options) %}
+    {% set attributes = options.attributes|default({}) %}
+    {% set classes -%}uk-description-list-{{ options.style == "line" ? "line" : "horizontal" }}{{ attributes.class ? ' ' ~ attributes.class }}{% endset %}
+    {% spaceless %}
+        <dl {% for key, value in attributes|merge({ 'class': classes }) %} {{ key }}="{{ value }}" {% endfor %}>
+            {% for item in data %}
+                {# TODO: Currently the design for uikit dl can't handle multiple dt without looking wrong.
+                May want to make a homebaked CSS if we have a need for that. For now the macro is built so
+                dt can take a string, but dd can take a string or an array. #}
+                <dt>{{ item.term|raw }}</dt>
+                {% if item.description is iterable %}
+                    {% for dd in item.description %}<dd>{{ dd|raw }}</dd>{% endfor %}
+                {% else %}
+                    <dd>{{ item.description|raw }}</dd>
+                {% endif %}
+            {% endfor %}
+        </dl>
+    {% endspaceless %}
+{% endmacro %}
+
+{% macro modalTrigger(action, target, options) %}
+    {% if options.bgcloseDisable ==  true %}
+        {% set bgclose = 'bgclose:false' %}
+    {% endif %}
+    {% if options.keepOpenModal == true %}
+        {% set modal = 'modal:false' %}
+    {% endif %}
+    {% if options.center == true %}
+        {% set center = 'center:true' %}
+    {% endif %}
+    {% if bgclose or modal or center %}
+        {% set jsoptions -%}
+            {{ bgclose ? bgclose ~ ',' }}{{ modal ? modal ~ ','}}{{ center ? center }}
+        {% endset %} 
+    {% endif %}
+    {% if options.button %}
+        {% if options.button is not iterable %}{% set button = {} %}{% else %}{% set button = options.button %}{% endif %}
+        {% if target %}
+            {% set jsoptions -%}target:'#{{ target }}'{{ jsoptions ? ',' ~ jsoptions }}{% endset %}
+            {% set attributes = button.attributes|default({})|merge({ 'data-uk-modal' : '{' ~ jsoptions ~ '}' }) %}
+            {{ _self.button(action, button|merge({ 'attributes' : attributes }) ) }}
+        {% else %}
+            {{ _self.button(action, button) }}
+        {% endif %}
+    {% else %}
+        <a{% for key, value in options.link.attributes %} {{ key }}="{{ value }}"{% endfor %} href="#{{ target }}" data-uk-modal="{{ jsoptions ? '{' ~ jsoptions ~ '}'}}">{{ action|raw }}</a>
+    {% endif %}
+{% endmacro %}
+
+{% macro modal(content, target, options) %}
+    <div id="{{ target }}" class="uk-modal{{ options.class ? " " ~ options.class }}">
+        <div class="uk-modal-dialog{{ options.lightbox ? " uk-modal-dialog-lightbox"}}{{ options.blank ? " uk-modal-dialog-blank"}}{{ options.large ? " uk-modal-dialog-large"}}">
+            <button type="button" class="uk-modal-close uk-close{{ options.lightbox ? " uk-close-alt"}}"></button>
+            {% if options.header %}
+                <div class="uk-modal-header">{{ options.header|raw }}</div>
+            {% endif %}
+            {{ content|raw }}
+            {% if options.footer %}
+                <div class="uk-modal-footer uk-text-right">{{ options.footer|raw }}</div>
+            {% endif %}
+            {% if options.caption %}
+                <div class="uk-modal-caption">
+                    {{ options.caption|raw }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro panel(content, options) %}
+    {% set attributes = options.attributes|default({}) %}
+    {% set classes -%}uk-panel{{ options.box ? ' uk-panel-box' }}{{ options.primary ? ' uk-panel-box-primary' }}{{ options.secondary ? ' uk-panel-box-secondary' }}{% if options.hover %}{% if options.box and not options.primary or options.secondary %} uk-panel-box-hover{% elseif options.primary%} uk-panel-box-primary-hover{% elseif options.secondary%} uk-panel-box-secondary-hover{% else %} uk-panel-hover{% endif %}{% endif %}{{ options.header ? ' uk-panel-header' }}{{ options.space ? ' uk-panel-space' }}{{ options.divider ? ' uk-panel-divider' }}{{ attributes.class ? ' ' ~ options.attributes.class }}{% endset %}
+    <{{ options.link ? 'a href=' ~ options.link.href : 'div'}} {% for key, value in attributes|merge({ 'class': classes }) %} {{ key }}="{{ value }}" {% endfor %}>
+        {% if options.teaser %}
+            <div class="uk-panel-teaser">
+                <img src="{{ options.teaser.src }}" alt="{{ options.teaser.alt }}">
+            </div>
+        {% endif %}
+        {% if options.badge %}
+            {% set classes -%}uk-panel-badge{{ options.badge.attributes.class ? ' ' ~ options.badge.attributes.class }}{% endset %}
+            {% set attributes = options.badge.attributes|default({})|merge({ 'class' : classes }) %}
+            {{ _self.badge(options.badge.content, options.badge|merge({'attributes' : attributes} )) }}
+        {% endif %}
+        {% if options.title %}
+            <{{ options.title.tag ? options.title.tag : 'h3'}} class="uk-panel-title">{{ options.title.icon ? _self.icon(options.title.icon) }}{{ options.title.text|raw }}</{{ options.title.tag ? options.title.tag : 'h3'}}>
+        {% endif %}
+        {% if options.link_cover %}
+            <a class="uk-position-cover" href="{{ options.link_cover }}"></a>
+        {% endif %}
+        {{ content|raw }}
+    </{{ options.link ? 'a' : 'div'}}>
+{% endmacro %}
+
+
+{% macro tab(data, options) %} 
+    {# sentry-tabs class on ul remember to add to fix for branding tabs #}
+    {% if options.tab_center %}
+    {% set class %}uk-tab-center {{ options.tab_bottom == 'bottom' ? ' uk-tab-center-bottom' }}{% endset %}
+        <div class="{{ class }}">
+    {% endif %}
+    {% set attributes = options.attributes|default({}) %}
+    {% set classes %}uk-tab{% if options.tab_flip %} uk-tab-flip{% endif %}{% if options.tab_bottom %} uk-tab-bottom{% endif %}{% if options.tab_grid %} uk-tab-grid{% endif %}{% if options.tab_vertical == "left" %} uk-tab-left{% elseif options.tab_vertical == "right" %} uk-tab-right{% endif %}{% if attributes.class %} {{ attributes.class }}{% endif %}{% endset %}
+        <ul {% for key, value in attributes|merge({ 'class': classes }) %} {{ key }}="{{ value }}"{% endfor %}{% if options.switcher %} data-uk-switcher="{connect:'{{ options.switcher }}'}"{% endif %} data-uk-tab>
+            {% for tab in data %}
+                {% set attributes = tab.attributes|default({}) %}
+                {% set classes %}{{ tab.active ? 'uk-active ' }}{{ tab.disabled ? 'uk-disabled ' }}{{ attributes.class ? attributes.class}}{% endset %}
+                <li {% for key, value in attributes|merge({ 'class': classes }) %} {{ key }}="{{ value }}"{% endfor %}{{ tab.dropdown ? _self.dropdownOptions(tab.dropdown_options) }}>
+                    <a href="#">{{ tab.text }}{% if tab.dropdown %}{{ _self.icon('sds-caret-down') }}{% endif %}</a>
+                    {{ tab.dropdown ? tab.dropdown|raw }}
+                </li>
+            {% endfor %}
+        </ul>
+    {{ options.tab_center ? '</div>' }}
+{% endmacro %}
+
+{% macro toggleTrigger(action, target, options) %}
+    {% spaceless %}
+        {% if options.animation -%}{% set animation -%}{% for animations in options.animation -%}{{_self.animations(animations)}}{{ not loop.last ? ', ' }}{% endfor %}{% endset %}{% endif %}
+        {% set jsoptions -%}target :'{{ target }}'{% if animation %}, animation: '{{ animation }}'{% endif %}{% if options.toggle_class %}, cls: '{{ options.toggle_class }}'{% endif %}{% endset %} 
+        {% if options.button %}
+            {% if options.button is not iterable %}{% set button = {} %}{% else %}{% set button = options.button %}{% endif %}
+            {% set attributes = button.attributes|default({})|merge({ 'data-uk-toggle' : '{' ~ jsoptions ~ '}' }) %}
+            {{ _self.button(action, button|merge({ 'attributes' : attributes }) ) }}
+        {% else %}
+            <a{% for key, value in link.attributes %} {{ key }}="{{ value }}"{% endfor %} data-uk-toggle="{ {{ jsoptions }} }">{{ action|raw }}</a>
+        {% endif %}
+    {% endspaceless %}
+{% endmacro %}
+
+{% macro icon(icon, options) %}
+    {% set tag = options.link or options.button ? 'a' : 'span' %}
+    {% set attributes = options.attributes|default({}) %}
+    {% set classes -%}icon {{ icon }}{{ options.size ? ' uk-icon-' ~ options.size }}{{ options.spin ? ' uk-icon-spin' }}{{ options.link and not options.button ? ' uk-icon-hover' }}{{ options.button ? ' uk-icon-button' }}{{ options.justify ? ' uk-icon-justify' }}{{ attributes.class ? ' ' ~ attributes.class }}{% endset %}
+    <{{ tag }} {% for key, value in attributes|merge({ 'class': classes }) %} {{ key }}="{{ value }}"{% endfor %}></{{ tag }}>
+{% endmacro %}
+
+{# uikit attribute helpers #}
+
+{% macro animations(name) %}uk-animation-{{ name }}{% endmacro %}
+
+{% macro dropdownOptions(data) %}
+    {% set data -%}{% for key, value in data %}{{ key }}:'{{ value }}'{{ not loop.last ? ', ' }}{% endfor %}{% endset %}
+    data-uk-dropdown="{ {{ data|default("mode:'click'") }} }"
+{% endmacro %}
