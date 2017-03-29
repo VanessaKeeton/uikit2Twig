@@ -1,0 +1,232 @@
+{%- extends "form_div_layout.html.twig" -%}
+
+{%- block form_widget_compound -%}
+        {%- if form.parent is empty -%}
+            {# {{ uikit.alert(form_errors(form), {color:'danger'}) }} #}
+            {{ form_errors(form) }}
+        {%- endif -%}
+        {{- block('form_rows') -}}
+        {{- form_rest(form) -}}
+{%- endblock form_widget_compound -%}
+
+{%- block form_start -%}
+    {% set method = method|upper %}
+    {%- if method in ["GET", "POST"] -%}
+        {% set form_method = method %}
+    {%- else -%}
+        {% set form_method = "POST" %}
+    {%- endif -%}
+    {% set classes -%}uk-form {% if layout == 'horizontal' %}uk-form-horizontal {% endif %}{% if layout == 'vertical' %}uk-form-stacked {% endif %}{{ attr.class }}{% endset %}
+    <form name="{{ name }}" method="{{ form_method|lower }}" action="{{ action }}"{% for attrname, attrvalue in attr|merge({ 'class': classes }) %} {{ attrname }}="{{ attrvalue }}"{% endfor %}{% if multipart %} enctype="multipart/form-data"{% endif %}>
+    {%- if form_method != method -%}
+        <input type="hidden" name="_method" value="{{ method }}" />
+    {%- endif -%}
+{%- endblock form_start -%}
+
+{% block form_rows -%}
+    {% for child in form -%}
+        {% set feildname = child.vars.name %}
+        {% for key,value in notes %}
+            {% if key == feildname %}{{ form_row(child, {note : value|default(null)}) }}{% endif %}
+        {% endfor %}
+        {{ form_row(child) }}
+    {%- endfor %}
+{%- endblock form_rows %}
+
+{% block form_rest -%}
+    {% for child in form -%}
+        {% if not child.rendered -%}
+            {% set feildname = child.vars.name %}
+            {% for key,value in notes %}
+                {% if key == feildname %}{{ form_row(child, {note : value|default(null)}) }}{% endif %}
+            {% endfor %}
+            {{ form_row(child) }}
+        {%- endif %}
+    {%- endfor %}
+{%- endblock form_rest %}
+
+{% block form_row %}
+ {% if block_prefixes[1] != 'collection' %}
+    {%- set title -%}
+        {% for error in errors %}{{ error.messageTemplate|trans(error.messageParameters, 'validators') }}{{ not loop.last ? ' ' }}{% endfor %}
+    {%- endset -%}
+    {% spaceless %}
+    <div class="uk-form-row">
+        {{ form_label(form, label|default(null)) }}
+        <div class="uk-form-controls{% if compound %} uk-form-controls-text{% endif %}{% if block_prefixes[1] == 'checkbox' %} single-check{% endif %}{% if attr.autocomplete %} uk-autocomplete'{% endif %} " {% if attr.autocomplete %}data-uk-autocomplete="{source:'{{ attr.autocomplete }}', minLength:'1'}"{% endif %}>
+            {{ form_widget(form, { attr : { title : title|default(attr.title) } }) }}
+            {% if note|default %}
+            <span class="uk-form-help-inline">{{ note|raw }}</span>
+        {% endif %}
+            {{ form_errors(form) }}
+        </div>
+    </div>
+{% endspaceless %}
+{% endif %}
+{% endblock %}
+
+{% block form_errors -%}
+    {% if errors|length > 0 %}
+            {% for error in errors %}
+                <p class="uk-form-help-block uk-text-danger">{{ error.messageTemplate|trans(error.messageParameters, 'validators') }}</p>
+            {% endfor %}
+    {% endif %}
+{%- endblock form_errors %}
+
+{%- block button_row -%}
+    <div class="form-buttons">
+        {# {{- form_widget(form) -}} #}
+        {{- block('button_widget') -}}
+    </div>
+{%- endblock button_row -%}
+
+{%- block hidden_row -%}
+    <div class="hidden-input">{{ form_widget(form) }}</div>
+{%- endblock hidden_row -%}
+
+{%- block hidden_widget -%}
+    {%- set type = type|default('hidden') -%}
+    {{ block('form_widget_simple') }}
+{%- endblock hidden_widget -%}
+
+{%- block percent_widget -%}
+    {%- set type = type|default('text') -%}
+    <div class="uk-form-icon"><span class="uk-icon-none" style="font-family:arial,sans"><b>%</b></span>
+        {{ block('form_widget_simple') }}
+    </div>
+{%- endblock percent_widget -%}
+
+{% block money_widget %}{% spaceless %}
+    <div class="uk-form-icon"><span class="uk-icon-none" style="font-family:arial,sans"><b>$</b></span>
+    {{ block('form_widget') }}
+    </div>
+{% endspaceless %}{% endblock %}
+
+{% block form_widget_simple -%}
+    {% set attr = attr|merge({ 'class' : (attr.class|default('') ~ ' text') }) %}
+    {% if errors|length > 0 %}{% set attr = attr|merge({ 'class' : (attr.class|default('') ~ ' uk-form-danger') }) %}{% endif %}
+    {%- set type = type|default('text') -%}
+    {% if read_only and disabled %}
+        <span>{% if value is not empty %}{{ value }}{% endif %}</span>
+    {% else %}
+        {# {% if type == 'date' %}
+            {% set format = "{format:'" ~  format|default('MM/DD/YYYY') ~ "'}" %}
+            <input type="text" data-uk-datepicker="{{ format }}" {{ block('widget_attributes') }} {% if value is not empty %}value="{{ value }}" {% endif %}/>
+        {% else %} #}
+        <input type="{{ type }}" {{ block('widget_attributes') }} {% if value is not empty %}value="{{ value }}" {% endif %} {% if step is not empty %}step="{{ step }}" {% endif %} />
+        {# {% endif %} #}
+    {% endif %}
+{%- endblock form_widget_simple %}
+
+{% block datetime_widget -%}
+    {% if widget == 'single_text' %}
+        {{ block('form_widget') }}
+    {% else %}
+            {{ form_widget(form.date) }}
+            {{ form_widget(form.time.hour, { 'attr': { 'class': 'hour' } }) }}
+            <span class="conjunction">:</span>
+            {{ form_widget(form.time.minute, { 'attr': {'class': 'minute' } }) }}
+    {% endif %}
+{%- endblock datetime_widget %}
+
+{% block daterange_widget %}
+    <span class="fields range_container date_range_containe">
+        {{ form_widget(form.start, {
+            'attr': attr|merge({'data-range-end': '#' ~ form.end.vars.id})
+        }) }}
+        <span class="conjunction">to</span>
+        {{ form_widget(form.end, {
+            'attr': attr
+        }) }}
+    </span>
+{% endblock %}
+
+{% block numericrange_widget %}
+    {% set attr = attr|merge({'class' : 'numeric_range'}) %}
+
+    <span class="fields range_container numeric_range_container">
+        {{ form_widget(form.start, {'attr':attr}) }}
+        <span class="conjunction">to</span>
+        {{ form_widget(form.end, {'attr':attr}) }}
+        </span>
+{% endblock %}
+
+
+{% block date_widget -%}
+    {% if widget == 'single_text' %}
+        {% set format = "{format:'" ~  format|default('MM/DD/YYYY') ~ "'}" %}
+        {% set type = type|default('text') %}
+        {% set attr = attr|merge({ 'class' : (attr.class|default('') ~ ' date_selector date') }) %}
+        {% if attr['data-uk-datepicker'] != 'false' %}
+            {% set attr = attr|merge({ 'data-uk-datepicker': format }) %}
+        {% endif %}
+        <div class="uk-form-icon"><span class="icon sds-calendar"></span>
+        {{ block('form_widget') }}
+        </div>
+    {% else %}
+        <div {{ block('widget_container_attributes') }}>
+            {{ date_pattern|replace({
+                '{{ year }}':  form_widget(form.year),
+                '{{ month }}': form_widget(form.month),
+                '{{ day }}':   form_widget(form.day),
+            })|raw }}
+        </div>
+    {% endif %}
+{%- endblock date_widget %}
+
+{% block button_widget -%}
+    {% set attributes = attr|default({})|merge({'id' : id, 'name' : full_name, 'type' : type|default('button')}) %}
+    {% set options = options|default({})|merge({ 'attributes': attributes , 'disabled' : disabled, 'color' : color, 'fullwidth' : fullwidth }) %}
+    {% if label is empty -%}
+        {% set label = name|humanize %}
+    {%- endif -%}
+    {% set action = label|trans({}, translation_domain)|raw %}
+    {{ uikit.button(action, options) }}
+{%- endblock button_widget %}
+
+
+{%- block form_label -%}
+    {% set id %}{{ attr.id ? attr.id : id }}{% endset %}
+    {%- set label_attr = label_attr|merge({'class': (label_attr.class|default('') ~ ' uk-form-label')|trim}) -%}
+    {% if label is not sameas(false) -%}
+        {% if not compound -%}
+            {% set label_attr = label_attr|merge({'for': id}) %}
+        {%- endif %}
+        {% if required -%}
+            {% set label_attr = label_attr|merge({'class': (label_attr.class|default('') ~ ' required')|trim}) %}
+        {%- endif %}
+        {% if label is empty -%}
+            {% set label = name|humanize %}
+        {%- endif -%}
+        {% set tag %}{{ expanded ? 'span' : 'label'}}{% endset %}
+        <{{ tag }}{% for attrname, attrvalue in label_attr %} {{ attrname }}="{{ attrvalue }}"{% endfor %}>{% spaceless %}{{ label|trans({}, translation_domain) }}{% if required == true %}<span class="{{ errors|length > 0 ? 'uk-text-danger' : 'uk-text-muted'}}"><sup>*</sup></span>
+        {% endif %}
+        {% endspaceless %}</{{ tag }}>
+    {%- endif -%}
+{%- endblock form_label -%}
+
+{% block form_end -%}
+    </form>
+{%- endblock form_end %}
+
+{% block widget_attributes -%}
+    id="{{ attr.id ? attr.id : id }}" name="{{ attr.name ? attr.name : full_name }}"{% if read_only %} readonly="readonly" {% endif %}{% if disabled %} disabled="disabled"{% endif %}{% if required %} required="required"{% endif %}{% if max_length %} maxlength="{{ max_length }}"{% endif %}{% if pattern %} pattern="{{ pattern }}"{% endif %} {% if attr.tooltip %}data-uk-tooltip="{pos:'{{ attr.tooltip|default('right') }}'}"{% endif %}
+{%- for attrname, attrvalue in attr %} {% if attrname in ['placeholder', 'title'] %}{{ attrname }}="{{ attrvalue|trans({}, translation_domain) }}"{% else %}{{ attrname }}="{{ attrvalue }}"{% endif %}{% endfor %}
+{%- endblock widget_attributes %}
+
+
+{%- block collection_widget -%}
+    {% if prototype is defined %}
+        {%- set attr = attr|merge({'data-prototype': form_widget(prototype) }) -%}
+    {% endif %}
+    {{- block('form_widget') -}}
+{%- endblock collection_widget -%}
+
+{% block number_widget %}{% spaceless %}
+
+    {# type="number" does not work with floats #}
+    {% set type = type|default('number') %}
+    {% set step = step|default('any') %}
+    {{ block('form_widget') }}
+
+{% endspaceless %}{% endblock %}
